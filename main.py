@@ -1,8 +1,8 @@
 from smartcard.System import readers
-from smartcard.util import toHexString
+from smartcard.util import toHexString, toBytes
 
-def read_card_data():
-    # Get all the available readers
+def send_custom_command():
+    # Get all available card readers
     card_readers = readers()
     if not card_readers:
         print("No card readers found")
@@ -19,18 +19,25 @@ def read_card_data():
         connection = reader.createConnection()
         connection.connect()
 
-        # Command to get the UID of the NFC card
-        # This is a standard command for ISO14443A cards to get the UID
-        get_uid_command = [0xFF, 0xCA, 0x00, 0x00, 0x00]
-        data, sw1, sw2 = connection.transmit(get_uid_command)
+        while True:
+            # Get user input for hex command
+            hex_command = input("Enter the hex command to send (or type 'exit' to quit): ")
+            if hex_command.lower() == 'exit':
+                print("Exiting program.")
+                break
 
-        if sw1 == 0x90 and sw2 == 0x00:
-            print("Success: Card UID is", toHexString(data))
-        else:
-            print("Failed to read card UID")
+            try:
+                # Convert the hex command to bytes
+                command = toBytes(hex_command)
+                # Transmit the command to the card
+                data, sw1, sw2 = connection.transmit(command)
+                # Print the card's response
+                print("Card response:", toHexString(data), "Status words:", "%02X %02X" % (sw1, sw2))
+            except Exception as e:
+                print("Error sending command:", str(e))
 
     except Exception as e:
         print("Failed to connect to the card:", str(e))
 
 if __name__ == "__main__":
-    read_card_data()
+    send_custom_command()
