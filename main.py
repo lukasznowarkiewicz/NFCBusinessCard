@@ -45,27 +45,46 @@ def send_custom_command():
 
 def read_ndef(connection):
     try:
-        result_string = ""
-        page = 4
-        end_of_ndef = False
+        # Read capability container at page 3 to confirm if NDEF data is present
+        command = [0xFF, 0xB0, 0x00, 0x03, 0x10]  # Read 16 bytes starting from page 3
+        data, sw1, sw2 = connection.transmit(command)
+        if sw1 != 0x90 or sw2 != 0x00:
+            print("Failed to read capability container or no NDEF data.")
+            return None
 
-        while not end_of_ndef:
+        # Checking NDEF Magic Number
+        if data[0] != 0xE1:
+            print("No NDEF data present.")
+            return None
+        
+        # Calculate total NDEF pages (assuming typical page size is 4 bytes)
+        total_pages = (data[2] * 8) // 4  # Convert from total memory size to total pages
+        result_string = ""
+
+        # Read the NDEF data from the card
+        page = 4  # Start reading from page 4
+        while page < total_pages:
             command = [0xFF, 0xB0, 0x00, page, 0x10]
             data, sw1, sw2 = connection.transmit(command)
             if sw1 == 0x90 and sw2 == 0x00:
-                readable_data = ''.join(chr(x) if 32 <= x <= 126 else '' for x in data)
-                result_string += readable_data
-                if 0xFE in data:
-                    end_of_ndef = True
+                # Process each byte in the data
+                for byte in data:
+                    if byte == 0xFE:
+                        # NDEF record terminator found
+                        return result_string.strip()
+                    if 32 <= byte <= 126:
+                        result_string += chr(byte)
             else:
                 print("Failed to read data at page", page)
                 break
             page += 4
+
         return result_string.strip()
 
     except Exception as e:
         print("An error occurred while reading NDEF data:", str(e))
         return None
+
 
 if __name__ == "__main__":
     send_custom_command()
