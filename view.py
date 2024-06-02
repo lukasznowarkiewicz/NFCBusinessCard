@@ -7,6 +7,7 @@ class CardView:
             self.root.geometry("800x600")
             self.root.title("Programowanie elektronicznej wizytówki")
             self.root.configure(bg='gray12')
+            self.controller = None
 
             # Tworzenie Label i Entry dla łączenia z czytnikiem
             self.connect_button = tk.Button(root, text="Połącz z czytnikiem", command=self.on_connect, bg='red3')
@@ -40,19 +41,25 @@ class CardView:
             # Pole tekstowe do wyświetlania logów
             self.log_text = tk.Text(root, height=10, width=80, bg='gray30', fg='white')
             self.log_text.pack(pady=(20, 0))
+    def set_controller(self, controller):
+         self.controller = controller
+
     def on_connect(self):
+        
          pass
 
     def on_write(self):
         if self.write_callback:
             self.write_callback(self.user_id_entry.get())
 
+    def on_clear(self):
+        # Tutaj zaimplementujemy logikę czyszczenia karty
+        if self.controller:
+            self.controller.clear_card()
+        self.log_text.insert(tk.END, "Wyslano rzadanie czyszczenia karty do controllera...\n")
+
     def set_write_callback(self, callback):
         self.write_callback = callback
 
     def update_status(self, status):
         self.status_label.config(text=status)
-
-    def on_clear(self):
-        # Tutaj zaimplementujemy logikę czyszczenia karty
-        self.log_text.insert(tk.END, "Czyszczenie karty...\n")
