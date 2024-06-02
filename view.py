@@ -3,20 +3,45 @@ import tkinter as tk
 
 class CardView:
     def __init__(self, root):
-        self.root = root
-        self.root.title("Programowanie Kart Dostępu")
+            self.root = root
+            self.root.geometry("800x600")
+            self.root.title("Programowanie elektronicznej wizytówki")
+            self.root.configure(bg='gray12')
 
-        self.user_id_label = tk.Label(root, text="User ID:")
-        self.user_id_label.pack()
+            # Tworzenie Label i Entry dla łączenia z czytnikiem
+            self.connect_button = tk.Button(root, text="Połącz z czytnikiem", command=self.on_connect, bg='red3')
+            self.connect_button.pack()
+            
+            # Tworzenie Label i Entry dla Tekstu
+            self.text_label = tk.Label(root, text="Text:", bg='gray12', fg='white')
+            self.text_label.pack(pady=(20, 0))
+            self.text_entry = tk.Entry(root, width=50)
+            self.text_entry.pack()
 
-        self.user_id_entry = tk.Entry(root)
-        self.user_id_entry.pack()
+            # Tworzenie Label i Entry dla Numeru Telefonu
+            self.phone_label = tk.Label(root, text="Numer telefonu:", bg='gray12', fg='white')
+            self.phone_label.pack(pady=(20, 0))
+            self.phone_entry = tk.Entry(root, width=50)
+            self.phone_entry.pack()
 
-        self.write_button = tk.Button(root, text="Zapisz na karcie", command=lambda: self.on_write())
-        self.write_button.pack()
+            # Tworzenie Label i Entry dla URL
+            self.url_label = tk.Label(root, text="Adres URL:", bg='gray12', fg='white')
+            self.url_label = tk.Label(root, text="Adres URL:", bg='gray12', fg='white')
+            self.url_label.pack(pady=(20, 0))
+            self.url_entry = tk.Entry(root, width=50)
+            self.url_entry.pack()
 
-        self.status_label = tk.Label(root, text="")
-        self.status_label.pack()
+            # Przyciski do programowania i czyszczenia karty
+            self.write_button = tk.Button(root, text="Programuj kartę", command=self.on_write, bg='deep sky blue')
+            self.write_button.pack(pady=(20, 0))
+            self.clear_button = tk.Button(root, text="Czyść kartę", command=self.on_clear, bg='red3')
+            self.clear_button.pack()
+
+            # Pole tekstowe do wyświetlania logów
+            self.log_text = tk.Text(root, height=10, width=80, bg='gray30', fg='white')
+            self.log_text.pack(pady=(20, 0))
+    def on_connect(self):
+         pass
 
     def on_write(self):
         if self.write_callback:
@@ -27,3 +52,7 @@ class CardView:
 
     def update_status(self, status):
         self.status_label.config(text=status)
+
+    def on_clear(self):
+        # Tutaj zaimplementujemy logikę czyszczenia karty
+        self.log_text.insert(tk.END, "Czyszczenie karty...\n")
