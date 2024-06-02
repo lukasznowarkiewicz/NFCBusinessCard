@@ -92,49 +92,53 @@ class CardModel:
     
     def save_ndef_data(self, text, phone, url):
         # Składanie danych NDEF
-        ndef_message = self.prepare_ndef_message(text, phone, url)
+        ndef_message = self.prepare_ndef_message(url)
         r = readers()
         if not r:
-            self.notify_callbacks("Żaden czytnik nie jest dostępny.")
+            self.notify("Żaden czytnik nie jest dostępny.")
             return
 
         reader = r[0]
         connection = reader.createConnection()
         try:
             connection.connect()
-            # Przykładowa komenda APDU do zapisu danych NDEF
-            # Należy dostosować komendy do specyfiki karty
-            command = [0xFF, 0xD6, 0x00, 0x04, len(ndef_message)] + ndef_message
-            command_hex = toHexString(command)
-            self.notify_callbacks("Wysyłam komendę zapisu: " + toHexString(command))
-            response, sw1, sw2 = connection.transmit(command)
-            self.notify_callbacks(f"Odpowiedź z karty: SW1={sw1:02X}, SW2={sw2:02X}")
-        except NoCardException:
-            self.notify_callbacks("Brak karty w czytniku.")
-        
-    # def prepare_ndef_message(self, text, phone, url):
-    #     # Prosta implementacja rekordu URI NDEF
-    #     # Dla przykładu, skupimy się na zapisie URL
-    #     uri_prefix = b'\x01'  # Prefiks dla "http://www."
-    #     uri_field = url.encode('utf-8')
-    #     return [0xD1, 0x01, len(uri_field) + 1, 0x55, uri_prefix] + list(uri_field)
+            
+            # Rozpoczęcie zapisu na 4. stronie
+            page = 4
+            # Wysyłanie komend w blokach po 4 bajty
+            while ndef_message:
+                block = ndef_message[:4]  # Pobieranie bloku 4 bajtów
+                command = [0xFF, 0xD6, 0x00, page, len(block)] + block
+                response, sw1, sw2 = connection.transmit(command)
+                self.notify_callbacks(f"Wysyłam komendę zapisu na stronę {page}: " + toHexString(command))
+                self.notify_callbacks(f"Odpowiedź z karty: SW1={sw1:02X}, SW2={sw2:02X}")
+                if sw1 != 0x90 or sw2 != 0x00:
+                    self.notify_callbacks(f"Błąd zapisu na stronie {page}.")
+                    break
+                page += 1
+                ndef_message = ndef_message[4:]  # Usuwanie wysłanego bloku
 
-    def prepare_ndef_message(self, text, phone, url):
-        # Zakładając, że skupiamy się na zapisie URL jako rekordu NDEF
-        # 0xD1: MB/ME=1, CF=0, SR=1, IL=0, TNF=1 (NFC Well Known Type)
-        # 0x01: Typ długości - 1 bajt
-        # Długość ładunku = długość prefixu (1 bajt) + długość URL
-        # 0x55: Typ rekordu - 'U' (URI)
-        # 0x01: Wartość prefixu dla "http://www."
-        
-        if not url.startswith("http://www."):
-            url = "http://www." + url  # Prosta normalizacja URL
-        
-        uri_field = url.encode('utf-8')[11:]  # Zakładamy, że "http://www." jest już uwzględnione
-        payload_length = len(uri_field) + 1  # Długość URL + 1 bajt prefixu
+        except NoCardException:
+            self.notify("Brak karty w czytniku.")
+
+    def prepare_ndef_message(self, url):
+        # Dla prostoty zakładamy, że URL jest już odpowiednio przygotowany i zaczyna się od http://example.com
+        # NDEF message dla URLa (http://example.com)
+        # 0x03: NDEF Message Begin Mark
+        # 0x10: Długość całego rekordu NDEF
+        # 0xD1: NDEF Header, MB=1, ME=1, CF=0, SR=1, IL=0, TNF=1
+        # 0x01: Typ długości (1 bajt)
+        # 0x0C: Długość payload'u (12 bajtów)
+        # 0x55: Typ rekordu 'U' (URI)
+        # 0x01: Identyfikator URI (0x01 oznacza "http://www.")
+        # URL 'example.com' minus 'http://www.' co daje 'example.com'
+        # 0xFE: NDEF Message End Mark
+
+        uri_field = url[19:].encode('utf-8')  # Usuwamy 'http://www.' z URL
+        payload_length = len(uri_field) + 1  # Długość URL + 1 bajt dla prefixu URI
         header = [0xD1, 0x01, payload_length, 0x55, 0x01]  # Nagłówek NDEF
-        full_message = header + list(uri_field)
-        
+        full_message = [0x03, payload_length + 5] + header + list(uri_field) + [0xFE]
+
         return full_message
 
         
