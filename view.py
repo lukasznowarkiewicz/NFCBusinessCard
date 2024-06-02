@@ -41,6 +41,14 @@ class CardView:
             self.write_button.pack(pady=(20, 0))
             self.clear_button = tk.Button(root, text="Czyść kartę", command=self.on_clear, bg='red3')
             self.clear_button.pack()
+ 
+            # Pole tekstowe na komendy APDU
+            self.command_entry = tk.Entry(self.root, width=40)
+            self.command_entry.pack(pady=10)
+
+            # Przycisk do wysyłania komendy
+            self.send_button = tk.Button(self.root, text="Wyślij Komendę", command=self.send_command)
+            self.send_button.pack(pady=10)
 
             # Pole tekstowe do wyświetlania logów
             self.log_text = tk.Text(root, height=10, width=80, bg='gray30', fg='white')
@@ -68,3 +76,10 @@ class CardView:
 
     def update_status(self, status):
         self.status_label.config(text=status)
+
+    def send_command(self):
+        command = self.command_entry.get()
+        self.controller.validate_and_send_command(command)
+
+    def update_log(self, message):
+         self.log_text.insert(tk.END, message + "\n")

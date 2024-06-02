@@ -73,7 +73,21 @@ class CardModel:
         except Exception as e:
             self.notify_callbacks(f"Błąd przy nawiązywaniu połączenia: {e}")
 
+    def send_apdu_command(self, apdu):
+        r = readers()
+        if not r:
+            self.notify("Żaden czytnik nie jest dostępny.")
+            return
 
+        reader = r[0]
+        connection = reader.createConnection()
+        try:
+            connection.connect()
+            response, sw1, sw2 = connection.transmit(apdu)
+            full_response = toHexString(response + [sw1, sw2])
+            self.notify_callbacks(f"Odpowiedź z karty: {full_response}")
+        except Exception as e:
+            self.notify_callbacks(f"Błąd komunikacji z kartą: {e}")
 
         
     def notify_callbacks(self, message):

@@ -1,5 +1,6 @@
 # controller.py
 import tkinter as tk
+import re
 class CardController:
     def __init__(self, view, model):
         self.view = view
@@ -29,4 +30,19 @@ class CardController:
 
     def update_view_log(self, message):
         self.view.log_text.insert(tk.END, message)
+
+    def validate_and_send_command(self, command):
+        # Usuwamy wszystkie zbędne znaki oraz zamieniamy popularne separatory na spacje
+        command = re.sub(r'[^0-9A-Fa-f]', '', command)
         
+        # Dzielenie ciągu na pary znaków (każda para to jeden bajt w hex)
+        hex_values = re.findall('.{1,2}', command)  # znajduje wszystkie pary znaków
+
+        # Walidacja, czy wszystkie pary to wartości hex (po usunięciu zbędnych znaków)
+        if all(re.fullmatch(r'[0-9A-Fa-f]{2}', value) for value in hex_values):
+            apdu = [int(value, 16) for value in hex_values]
+            formatted_command = ' '.join(hex_values).upper()
+            self.view.update_log(f"Wysyłam komendę: {formatted_command}")
+            self.model.send_apdu_command(apdu)
+        else:
+            self.view.update_log("Błąd: Wprowadzona komenda zawiera niepoprawne wartości szesnastkowe.")
