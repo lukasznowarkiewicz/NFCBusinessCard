@@ -8,6 +8,11 @@ class CardController:
         self.model.register_callback(self.update_view_log)
         self.view.set_write_callback(self.write_card)
 
+    def connectToReader(self):
+        self.model.connectToReader()
+        self.view.log_text.insert(tk.END, "Próbuje połaczyć się z czytnikiem...")
+        pass
+
     def clear_card(self):
         self.model.clear_card()
         self.view.log_text.insert(tk.END, "Wysłano rządanie wyczyszczenia do modelu\n")

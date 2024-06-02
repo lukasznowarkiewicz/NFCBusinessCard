@@ -23,6 +23,18 @@ class CardModel:
         # Logika zapisu danych na karcie
         pass
 
+    def connectToReader(self):
+        # Znalezienie wszystkich dostępnych czytników
+        card_readers = readers()
+        if not card_readers:
+            self.notify_callbacks("Nie znaleziono zadnych czytników.")
+            return
+        self.notify_callbacks("Znaleziono czytniki: " + str(card_readers))
+
+        #Wybranie pierwszego dostępnego
+        reader = card_readers[0]
+        self.notify_callbacks("Uzywam czytnika: " + str(reader))
+
     def clear_card(self):
         # Logika odpowiedzialna za czyszczenie danych karty NFC
         try:
@@ -43,6 +55,6 @@ class CardModel:
         
     def notify_callbacks(self, message):
         for callback in self.callbacks:
-            callback(message)
+            callback(message + "\n")
 
-            
+

@@ -45,8 +45,7 @@ class CardView:
          self.controller = controller
 
     def on_connect(self):
-        
-         pass
+        self.controller.connectToReader()
 
     def on_write(self):
         if self.write_callback:
