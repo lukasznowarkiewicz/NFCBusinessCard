@@ -54,11 +54,25 @@ class CardModel:
             connection.connect()
             atr = connection.getATR()
             self.notify_callbacks(f"ATR karty: {toHexString(atr)}")
+
+            # Komenda GET DATA do odczytu UID
+            GET_DATA_COMMAND = [0xFF, 0xCA, 0x00, 0x00, 0x00]
+            data, sw1, sw2 = connection.transmit(GET_DATA_COMMAND)
+            self.notify_callbacks("Wysłane rządzanie UID: " + toHexString(GET_DATA_COMMAND))
+            if sw1 == 0x90 and sw2 == 0x00:
+                uid = toHexString(data)
+                self.notify_callbacks(f"Otrzymane UID karty: {uid}")
+                return uid
+            else:
+                self.notify_callbacks("Nie udało się odczytać UID karty.")
+                return None
+
             return connection
         except NoCardException:
             self.notify_callbacks("Brak karty w czytniku.")
         except Exception as e:
             self.notify_callbacks(f"Błąd przy nawiązywaniu połączenia: {e}")
+
 
 
         
