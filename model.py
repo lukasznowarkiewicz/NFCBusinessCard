@@ -90,56 +90,63 @@ class CardModel:
             self.notify_callbacks(f"Błąd komunikacji z kartą: {e}")
 
     
-    def save_ndef_data(self, text, phone, url):
-        # Składanie danych NDEF
-        ndef_message = self.prepare_ndef_message(url)
-        r = readers()
-        if not r:
+    def save_ndef_data(self, url, text=None, phone=None):
+
+        # Używamy tylko URL dla prostego przykładu
+        ndef_commands = self.prepare_ndef_message(url)
+        reader_list = readers()
+        if not reader_list:
             self.notify("Żaden czytnik nie jest dostępny.")
             return
 
-        reader = r[0]
+        reader = reader_list[0]
         connection = reader.createConnection()
         try:
             connection.connect()
-            
-            # Rozpoczęcie zapisu na 4. stronie
-            page = 4
-            # Wysyłanie komend w blokach po 4 bajty
-            while ndef_message:
-                block = ndef_message[:4]  # Pobieranie bloku 4 bajtów
-                command = [0xFF, 0xD6, 0x00, page, len(block)] + block
+            for command in ndef_commands:
                 response, sw1, sw2 = connection.transmit(command)
-                self.notify_callbacks(f"Wysyłam komendę zapisu na stronę {page}: " + toHexString(command))
-                self.notify_callbacks(f"Odpowiedź z karty: SW1={sw1:02X}, SW2={sw2:02X}")
                 if sw1 != 0x90 or sw2 != 0x00:
-                    self.notify_callbacks(f"Błąd zapisu na stronie {page}.")
-                    break
-                page += 1
-                ndef_message = ndef_message[4:]  # Usuwanie wysłanego bloku
-
+                    self.notify_callbacks("Błąd zapisu, Status Word: {:02X} {:02X}".format(sw1, sw2))
+                    return
+            self.notify_callbacks("Dane NDEF zostały zapisane pomyślnie.")
         except NoCardException:
-            self.notify("Brak karty w czytniku.")
+            self.notify_callbacks("Nie wykryto karty.")
+        except Exception as e:
+            self.notify_callbacks(f"Wystąpił błąd: {str(e)}")
+
 
     def prepare_ndef_message(self, url):
-        # Dla prostoty zakładamy, że URL jest już odpowiednio przygotowany i zaczyna się od http://example.com
-        # NDEF message dla URLa (http://example.com)
-        # 0x03: NDEF Message Begin Mark
-        # 0x10: Długość całego rekordu NDEF
-        # 0xD1: NDEF Header, MB=1, ME=1, CF=0, SR=1, IL=0, TNF=1
-        # 0x01: Typ długości (1 bajt)
-        # 0x0C: Długość payload'u (12 bajtów)
-        # 0x55: Typ rekordu 'U' (URI)
-        # 0x01: Identyfikator URI (0x01 oznacza "http://www.")
-        # URL 'example.com' minus 'http://www.' co daje 'example.com'
-        # 0xFE: NDEF Message End Mark
+        from urllib.parse import urlparse
+        # Prefix dla 'http://www.'
+        uri_prefix = 0x01
+        # Odcinamy 'http://' dla skrócenia URL
+        parsed_url = urlparse(url)
+        short_url = parsed_url.netloc + parsed_url.path
 
-        uri_field = url[19:].encode('utf-8')  # Usuwamy 'http://www.' z URL
-        payload_length = len(uri_field) + 1  # Długość URL + 1 bajt dla prefixu URI
-        header = [0xD1, 0x01, payload_length, 0x55, 0x01]  # Nagłówek NDEF
-        full_message = [0x03, payload_length + 5] + header + list(uri_field) + [0xFE]
+        # Budowa payloadu dla URL
+        payload = [ord('U'), uri_prefix] + [ord(c) for c in short_url]
 
-        return full_message
+        # Długość payloadu
+        payload_length = len(payload)
+
+        # Budowanie NDEF Message
+        ndef_header = [0xD1, 0x01, payload_length, 0x55]  # D1 (SR, TNF), Type Length, Payload Length, Type 'U'
+        ndef_message = [0x03, payload_length] + ndef_header + payload + [0xFE]  # Dodajemy NDEF Message Start, Payload Length i Terminator NDEF
+
+        # Dodaj padding, jeśli potrzebny
+        while len(ndef_message) % 4 != 0:
+            ndef_message.append(0x00)  # Dodajemy padding do pełnych stron
+
+        # Podziel na strony
+        pages = [ndef_message[i:i+4] for i in range(0, len(ndef_message), 4)]
+        # Przygotuj komendy zapisu
+        commands = []
+        for page_number, page in enumerate(pages, start=4):  # Początkowa strona dla danych NDEF to 4
+            command = [0xFF, 0xD6, 0x00, page_number, 0x04] + page
+            commands.append(command)
+
+        return commands
+
 
         
     def notify_callbacks(self, message):
