@@ -20,20 +20,22 @@ class CardView:
             # Tworzenie Label i Entry dla Tekstu
             self.text_label = tk.Label(root, text="Text:", bg='gray12', fg='white')
             self.text_label.pack(pady=(20, 0))
-            self.text_entry = tk.Entry(root, width=50)
+            default_text = tk.StringVar(root, value="Cokolwiek")
+            self.text_entry = tk.Entry(root, width=50, textvariable=default_text)
             self.text_entry.pack()
 
             # Tworzenie Label i Entry dla Numeru Telefonu
             self.phone_label = tk.Label(root, text="Numer telefonu:", bg='gray12', fg='white')
             self.phone_label.pack(pady=(20, 0))
-            self.phone_entry = tk.Entry(root, width=50)
+            default_phone = tk.StringVar(root, value="+48601100100")
+            self.phone_entry = tk.Entry(root, width=50, textvariable=default_phone)
             self.phone_entry.pack()
 
             # Tworzenie Label i Entry dla URL
             self.url_label = tk.Label(root, text="Adres URL:", bg='gray12', fg='white')
-            self.url_label = tk.Label(root, text="Adres URL:", bg='gray12', fg='white')
             self.url_label.pack(pady=(20, 0))
-            self.url_entry = tk.Entry(root, width=50)
+            default_url = tk.StringVar(root, value="http://google.com")
+            self.url_entry = tk.Entry(root, width=50, textvariable=default_url)
             self.url_entry.pack()
 
             # Przyciski do programowania i czyszczenia karty
