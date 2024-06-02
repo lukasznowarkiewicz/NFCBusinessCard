@@ -9,10 +9,14 @@ class CardView:
             self.root.configure(bg='gray12')
             self.controller = None
 
-            # Tworzenie Label i Entry dla łączenia z czytnikiem
+            # Tworzenie  Entry dla łączenia z czytnikiem
             self.connect_button = tk.Button(root, text="Połącz z czytnikiem", command=self.on_connect, bg='red3')
             self.connect_button.pack()
             
+            # Tworzenie  Entry dla łączenia z kartą
+            self.connect_button = tk.Button(root, text="Połącz z kartą", command=self.on_connect_card, bg='red3')
+            self.connect_button.pack()
+
             # Tworzenie Label i Entry dla Tekstu
             self.text_label = tk.Label(root, text="Text:", bg='gray12', fg='white')
             self.text_label.pack(pady=(20, 0))
@@ -47,12 +51,14 @@ class CardView:
     def on_connect(self):
         self.controller.connectToReader()
 
+    def on_connect_card(self):
+         self.controller.connectToCard()
+
     def on_write(self):
         if self.write_callback:
             self.write_callback(self.user_id_entry.get())
 
     def on_clear(self):
-        # Tutaj zaimplementujemy logikę czyszczenia karty
         if self.controller:
             self.controller.clear_card()
         self.log_text.insert(tk.END, "Wyslano rzadanie czyszczenia karty do controllera...\n")

@@ -1,6 +1,8 @@
 # model.py
 from smartcard.System import readers
 from smartcard.util import toHexString
+from smartcard.Exceptions import NoCardException
+import smartcard
 import tkinter as tk
 
 class CardModel:
@@ -35,23 +37,30 @@ class CardModel:
         reader = card_readers[0]
         self.notify_callbacks("Uzywam czytnika: " + str(reader))
 
-    def clear_card(self):
-        # Logika odpowiedzialna za czyszczenie danych karty NFC
-        try:
-            # Symulacja operacji na karcie, np. poprzez interfejs API czytnika
-            # Można tutaj wywołać rzeczywiste funkcje czytnika kart NFC
-            print("Próba czyszczenia danych z karty NFC...")
-            self.notify_callbacks("Callback z modelu")
-            
-            # Załóżmy, że interfejs czytnika ma funkcję erase_card()
-            # reader.erase_card()
+    def connectToCard(self):
+        # Pobranie listy dostępnych czytników
+        r = readers()
+        if not r:
+            self.log("Żaden czytnik nie jest dostępny.")
+            return None
 
-            print("Czyszczenie karty zakończone sukcesem.")
-            return "Czyszczenie karty zakończone sukcesem."
+        # Wybór pierwszego dostępnego czytnika
+        reader = r[0]
+        self.notify_callbacks(f"Używany czytnik: {reader}")
+
+        try:
+            # Połączenie z kartą
+            connection = reader.createConnection()
+            connection.connect()
+            atr = connection.getATR()
+            self.notify_callbacks(f"ATR karty: {toHexString(atr)}")
+            return connection
+        except NoCardException:
+            self.notify_callbacks("Brak karty w czytniku.")
         except Exception as e:
-            error_msg = f"Błąd przy czyszczeniu karty: {e}"
-            print(error_msg)
-            return error_msg
+            self.notify_callbacks(f"Błąd przy nawiązywaniu połączenia: {e}")
+
+
         
     def notify_callbacks(self, message):
         for callback in self.callbacks:

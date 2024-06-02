@@ -11,7 +11,10 @@ class CardController:
     def connectToReader(self):
         self.model.connectToReader()
         self.view.log_text.insert(tk.END, "Próbuje połaczyć się z czytnikiem...")
-        pass
+
+    def connectToCard(self):
+        self.model.connectToCard()
+
 
     def clear_card(self):
         self.model.clear_card()
