@@ -37,7 +37,7 @@ class CardView:
             self.url_entry.pack()
 
             # Przyciski do programowania i czyszczenia karty
-            self.write_button = tk.Button(root, text="Programuj kartę", command=self.on_write, bg='deep sky blue')
+            self.write_button = tk.Button(root, text="Programuj kartę", command=self.on_save_data, bg='deep sky blue')
             self.write_button.pack(pady=(20, 0))
             self.clear_button = tk.Button(root, text="Czyść kartę", command=self.on_clear, bg='red3')
             self.clear_button.pack()
@@ -80,6 +80,12 @@ class CardView:
     def send_command(self):
         command = self.command_entry.get()
         self.controller.validate_and_send_command(command)
+
+    def on_save_data(self):
+        text_data = self.text_entry.get()
+        phone_data = self.phone_entry.get()
+        url_data = self.url_entry.get()
+        self.controller.save_data(text_data, phone_data, url_data)
 
     def update_log(self, message):
          self.log_text.insert(tk.END, message + "\n")
