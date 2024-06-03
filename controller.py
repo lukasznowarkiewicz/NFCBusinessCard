@@ -49,11 +49,12 @@ class CardController:
 
     def save_data(self, text, phone, url):
         errors = []
-        if not self.validate_text(text):
-            errors.append("Tekst jest pusty lub zawiera nieprawidłowe znaki.")
-        if not self.validate_phone(phone):
+        
+        if text and not self.validate_text(text):
+            errors.append("Tekst zawiera nieprawidłowe znaki.")
+        if phone and not self.validate_phone(phone):
             errors.append("Numer telefonu jest nieprawidłowy. Powinien zaczynać się od +48 i zawierać 9 kolejnych cyfr.")
-        if not self.validate_url(url):
+        if url and not self.validate_url(url):
             errors.append("Adres URL jest nieprawidłowy. Powinien zaczynać się od http:// lub https:// i zawierać nazwę domeny.")
 
         if errors:
@@ -62,6 +63,7 @@ class CardController:
         else:
             self.view.update_log("Dane zweryfikowane, przesyłam do modelu...")
             self.model.save_ndef_data(text, phone, url)
+
 
     def validate_text(self, text):
         # Weryfikacja czy tekst nie jest pusty

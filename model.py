@@ -91,11 +91,14 @@ class CardModel:
 
     
     def save_ndef_data(self, text=None, phone=None, url=None):
+        
+        if(url):
+            ndef_commands = self.prepare_url_ndef_message(url)
+        elif(phone):
+            ndef_commands = self.prepare_phone_ndef_message(phone)
+        else:
+            ndef_commands = self.prepare_text_ndef_message(text)
 
-        # Używamy tylko URL dla prostego przykładu
-        # ndef_commands = self.prepare_url_ndef_message(url)
-        # ndef_commands = self.prepare_phone_ndef_message(phone)
-        ndef_commands = self.prepare_text_ndef_message(text)
         reader_list = readers()
         if not reader_list:
             self.notify("Żaden czytnik nie jest dostępny.")
