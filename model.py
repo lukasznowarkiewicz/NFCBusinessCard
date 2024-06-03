@@ -93,7 +93,8 @@ class CardModel:
     def save_ndef_data(self, text=None, phone=None, url=None):
 
         # Używamy tylko URL dla prostego przykładu
-        ndef_commands = self.prepare_url_ndef_message(url)
+        # ndef_commands = self.prepare_url_ndef_message(url)
+        ndef_commands = self.prepare_phone_ndef_message(phone)
         reader_list = readers()
         if not reader_list:
             self.notify("Żaden czytnik nie jest dostępny.")
@@ -116,30 +117,6 @@ class CardModel:
         except Exception as e:
             self.notify_callbacks(f"Wystąpił błąd: {str(e)}")
     
-
-    # def prepare_url_ndef_message(self, url):
-    #     # Konwersja URL na bajty
-    #     url_bytes = url.encode('utf-8')
-
-    #     commands = []
-    #     current_page = 4  # Zaczynamy pisać od strony 4 w pamięci NFC tagu
-
-    #     # Dodajemy nagłówek NDEF
-    #     header = [0x03, len(url_bytes) + 5, 0xD1, 0x01, len(url_bytes) + 1, 0x55]  # 0x55 oznacza 'U' z "U"RI
-
-    #     # Cały komunikat NDEF, łącząc nagłówek z kodowanym URL
-    #     full_message = header + list(url_bytes) + [0xFE]  # 0xFE to znacznik końca NDEF Message
-
-    #     # Dzielimy komunikat na bloki po 4 bajty i pakujemy do komend APDU
-    #     while full_message:
-    #         chunk = full_message[:4]
-    #         full_message = full_message[4:]
-    #         if len(chunk) < 4:
-    #             chunk += [0x00] * (4 - len(chunk))  # Dopełnienie zerami, jeśli chunk jest krótszy niż 4 bajty
-    #         commands.append([0xFF, 0xD6, 0x00, current_page, 0x04] + chunk)
-    #         current_page += 1
-
-    #     return commands
 
     def prepare_url_ndef_message(self, url):
         # Lista predefiniowanych skrótów URI w formacie NDEF
@@ -184,16 +161,35 @@ class CardModel:
 
         return commands
 
+    def prepare_phone_ndef_message(self, phone_number):
+        # Usunięcie ewentualnych separatorów z numeru telefonu, jeśli są obecne
+        phone_number = phone_number.replace("-", "").replace(" ", "")
 
+        # Konwersja numeru telefonu na bajty
+        phone_bytes = phone_number.encode('utf-8')
 
-    def prepare_phone_ndef_message(self, url):
         commands = []
-        commands.append([0xFF, 0xD6, 0x00, 0x04, 0x04, 0x03, 0x10, 0xD1, 0x01])
-        commands.append([0xFF, 0xD6, 0x00, 0x05, 0x04, 0x0C, 0x55, 0x01, 0x65])
-        commands.append([0xFF, 0xD6, 0x00, 0x06, 0x04, 0x78, 0x61, 0x6D, 0x70])
-        commands.append([0xFF, 0xD6, 0x00, 0x07, 0x04, 0x6C, 0x65, 0x2E, 0x63])
-        commands.append([0xFF, 0xD6, 0x00, 0x08, 0x04, 0x6F, 0x6D, 0xFE, 0x00])
+        current_page = 4  # Zaczynamy pisać od strony 4 w pamięci NFC tagu
+        
+        # Dodajemy nagłówek NDEF
+        # 0x03 - początek wiadomości NDEF, (len(phone_bytes) + 5) - długość całego rekordu
+        # 0xD1 - flagi rekordu, 0x01 - typ rekordu, (len(phone_bytes) + 1) - długość payloadu, 0x55 - typ URI ('tel:')
+        header = [0x03, len(phone_bytes) + 5, 0xD1, 0x01, len(phone_bytes) + 1, 0x55, 0x05]  # 0x55: typ 'tel:', 0x05 oznacza prefix 'tel:'
+
+        # Cały komunikat NDEF, łącząc nagłówek z kodowanym numerem telefonu
+        full_message = header + list(phone_bytes) + [0xFE]  # 0xFE to znacznik końca NDEF Message
+        
+        # Dzielimy komunikat na bloki po 4 bajty i pakujemy do komend APDU
+        while full_message:
+            chunk = full_message[:4]
+            full_message = full_message[4:]
+            if len(chunk) < 4:
+                chunk += [0x00] * (4 - len(chunk))  # Dopełnienie zerami, jeśli chunk jest krótszy niż 4 bajty
+            commands.append([0xFF, 0xD6, 0x00, current_page, 0x04] + chunk)
+            current_page += 1
+
         return commands
+
 
     def prepare_text_ndef_message(self, url):
         commands = []
