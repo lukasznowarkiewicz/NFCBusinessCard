@@ -34,7 +34,7 @@ class CardView:
             # Tworzenie Label i Entry dla URL
             self.url_label = tk.Label(root, text="Adres URL:", bg='gray12', fg='white')
             self.url_label.pack(pady=(20, 0))
-            default_url = tk.StringVar(root, value="http://google.com")
+            default_url = tk.StringVar(root, value="http://example.com")
             self.url_entry = tk.Entry(root, width=50, textvariable=default_url)
             self.url_entry.pack()
 

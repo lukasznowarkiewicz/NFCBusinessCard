@@ -90,10 +90,10 @@ class CardModel:
             self.notify_callbacks(f"Błąd komunikacji z kartą: {e}")
 
     
-    def save_ndef_data(self, url, text=None, phone=None):
+    def save_ndef_data(self, text=None, phone=None, url=None):
 
         # Używamy tylko URL dla prostego przykładu
-        ndef_commands = self.prepare_ndef_message(url)
+        ndef_commands = self.prepare_url_ndef_message(url)
         reader_list = readers()
         if not reader_list:
             self.notify("Żaden czytnik nie jest dostępny.")
@@ -115,40 +115,87 @@ class CardModel:
             self.notify_callbacks("Nie wykryto karty.")
         except Exception as e:
             self.notify_callbacks(f"Wystąpił błąd: {str(e)}")
+    
 
+    # def prepare_url_ndef_message(self, url):
+    #     # Konwersja URL na bajty
+    #     url_bytes = url.encode('utf-8')
 
-    # def prepare_ndef_message(self, url):
-    #     from urllib.parse import urlparse
-    #     # Prefix dla 'http://www.'
-    #     uri_prefix = 0x01
-    #     # Odcinamy 'http://' dla skrócenia URL
-    #     parsed_url = urlparse(url)
-    #     short_url = parsed_url.netloc + parsed_url.path
-
-    #     # Budowa payloadu dla URL
-    #     payload = [ord('U'), uri_prefix] + [ord(c) for c in short_url]
-
-    #     # Długość payloadu
-    #     payload_length = len(payload)
-
-    #     # Budowanie NDEF Message
-    #     ndef_header = [0xD1, 0x01, payload_length, 0x55]  # D1 (SR, TNF), Type Length, Payload Length, Type 'U'
-    #     ndef_message = [0x03, payload_length] + ndef_header + payload + [0xFE]  # Dodajemy NDEF Message Start, Payload Length i Terminator NDEF
-
-    #     # Dodaj padding, jeśli potrzebny
-    #     while len(ndef_message) % 4 != 0:
-    #         ndef_message.append(0x00)  # Dodajemy padding do pełnych stron
-
-    #     # Podziel na strony
-    #     pages = [ndef_message[i:i+4] for i in range(0, len(ndef_message), 4)]
-    #     # Przygotuj komendy zapisu
     #     commands = []
-    #     for page_number, page in enumerate(pages, start=4):  # Początkowa strona dla danych NDEF to 4
-    #         command = [0xFF, 0xD6, 0x00, page_number, 0x04] + page
-    #         commands.append(command)
+    #     current_page = 4  # Zaczynamy pisać od strony 4 w pamięci NFC tagu
+
+    #     # Dodajemy nagłówek NDEF
+    #     header = [0x03, len(url_bytes) + 5, 0xD1, 0x01, len(url_bytes) + 1, 0x55]  # 0x55 oznacza 'U' z "U"RI
+
+    #     # Cały komunikat NDEF, łącząc nagłówek z kodowanym URL
+    #     full_message = header + list(url_bytes) + [0xFE]  # 0xFE to znacznik końca NDEF Message
+
+    #     # Dzielimy komunikat na bloki po 4 bajty i pakujemy do komend APDU
+    #     while full_message:
+    #         chunk = full_message[:4]
+    #         full_message = full_message[4:]
+    #         if len(chunk) < 4:
+    #             chunk += [0x00] * (4 - len(chunk))  # Dopełnienie zerami, jeśli chunk jest krótszy niż 4 bajty
+    #         commands.append([0xFF, 0xD6, 0x00, current_page, 0x04] + chunk)
+    #         current_page += 1
 
     #     return commands
-    def prepare_ndef_message(self, url):
+
+    def prepare_url_ndef_message(self, url):
+        # Lista predefiniowanych skrótów URI w formacie NDEF
+        uri_prefixes = [
+            "", "http://www.", "https://www.", "http://", "https://",
+            "tel:", "mailto:", "ftp://anonymous:anonymous@", "ftp://ftp.",
+            "ftps://", "sftp://", "smb://", "nfs://", "ftp://", "dav://",
+            "news:", "telnet://", "imap:", "rtsp://", "urn:", "pop:", "sip:",
+            "sips:", "tftp:", "btspp://", "btl2cap://", "btgoep://", "tcpobex://",
+            "irdaobex://", "file://", "urn:epc:id:", "urn:epc:tag:", "urn:epc:pat:",
+            "urn:epc:raw:", "urn:epc:", "urn:nfc:"
+        ]
+        
+        # Sprawdzanie, czy URL zaczyna się od któregokolwiek ze skrótów
+        prefix_code = 0
+        for i, prefix in enumerate(uri_prefixes):
+            if url.startswith(prefix):
+                prefix_code = i
+                url = url[len(prefix):]  # Usunięcie skrótu z URLa
+                break
+        
+        # Konwersja pozostałej części URL na bajty
+        url_bytes = url.encode('utf-8')
+        
+        commands = []
+        current_page = 4  # Zaczynamy pisać od strony 4 w pamięci NFC tagu
+        
+        # Dodajemy nagłówek NDEF
+        header = [0x03, len(url_bytes) + 5, 0xD1, 0x01, len(url_bytes) + 1, 0x55, prefix_code]
+        
+        # Cały komunikat NDEF, łącząc nagłówek z kodowanym URL
+        full_message = header + list(url_bytes) + [0xFE]  # 0xFE to znacznik końca NDEF Message
+        
+        # Dzielimy komunikat na bloki po 4 bajty i pakujemy do komend APDU
+        while full_message:
+            chunk = full_message[:4]
+            full_message = full_message[4:]
+            if len(chunk) < 4:
+                chunk += [0x00] * (4 - len(chunk))  # Dopełnienie zerami, jeśli chunk jest krótszy niż 4 bajty
+            commands.append([0xFF, 0xD6, 0x00, current_page, 0x04] + chunk)
+            current_page += 1
+
+        return commands
+
+
+
+    def prepare_phone_ndef_message(self, url):
+        commands = []
+        commands.append([0xFF, 0xD6, 0x00, 0x04, 0x04, 0x03, 0x10, 0xD1, 0x01])
+        commands.append([0xFF, 0xD6, 0x00, 0x05, 0x04, 0x0C, 0x55, 0x01, 0x65])
+        commands.append([0xFF, 0xD6, 0x00, 0x06, 0x04, 0x78, 0x61, 0x6D, 0x70])
+        commands.append([0xFF, 0xD6, 0x00, 0x07, 0x04, 0x6C, 0x65, 0x2E, 0x63])
+        commands.append([0xFF, 0xD6, 0x00, 0x08, 0x04, 0x6F, 0x6D, 0xFE, 0x00])
+        return commands
+
+    def prepare_text_ndef_message(self, url):
         commands = []
         commands.append([0xFF, 0xD6, 0x00, 0x04, 0x04, 0x03, 0x10, 0xD1, 0x01])
         commands.append([0xFF, 0xD6, 0x00, 0x05, 0x04, 0x0C, 0x55, 0x01, 0x65])
@@ -159,6 +206,7 @@ class CardModel:
         print(type(commands))
         print(type(commands[0][0]))
         return commands
+
 
         
     def notify_callbacks(self, message):
