@@ -104,7 +104,9 @@ class CardModel:
         try:
             connection.connect()
             for command in ndef_commands:
+                self.notify_callbacks("Wysyłam komendę: " + toHexString(command))
                 response, sw1, sw2 = connection.transmit(command)
+                # self.notify_callbacks("Odebrano komendę: " + toHexString(response) + toHexString(sw1) + toHexString(sw2))
                 if sw1 != 0x90 or sw2 != 0x00:
                     self.notify_callbacks("Błąd zapisu, Status Word: {:02X} {:02X}".format(sw1, sw2))
                     return
@@ -115,38 +117,48 @@ class CardModel:
             self.notify_callbacks(f"Wystąpił błąd: {str(e)}")
 
 
+    # def prepare_ndef_message(self, url):
+    #     from urllib.parse import urlparse
+    #     # Prefix dla 'http://www.'
+    #     uri_prefix = 0x01
+    #     # Odcinamy 'http://' dla skrócenia URL
+    #     parsed_url = urlparse(url)
+    #     short_url = parsed_url.netloc + parsed_url.path
+
+    #     # Budowa payloadu dla URL
+    #     payload = [ord('U'), uri_prefix] + [ord(c) for c in short_url]
+
+    #     # Długość payloadu
+    #     payload_length = len(payload)
+
+    #     # Budowanie NDEF Message
+    #     ndef_header = [0xD1, 0x01, payload_length, 0x55]  # D1 (SR, TNF), Type Length, Payload Length, Type 'U'
+    #     ndef_message = [0x03, payload_length] + ndef_header + payload + [0xFE]  # Dodajemy NDEF Message Start, Payload Length i Terminator NDEF
+
+    #     # Dodaj padding, jeśli potrzebny
+    #     while len(ndef_message) % 4 != 0:
+    #         ndef_message.append(0x00)  # Dodajemy padding do pełnych stron
+
+    #     # Podziel na strony
+    #     pages = [ndef_message[i:i+4] for i in range(0, len(ndef_message), 4)]
+    #     # Przygotuj komendy zapisu
+    #     commands = []
+    #     for page_number, page in enumerate(pages, start=4):  # Początkowa strona dla danych NDEF to 4
+    #         command = [0xFF, 0xD6, 0x00, page_number, 0x04] + page
+    #         commands.append(command)
+
+    #     return commands
     def prepare_ndef_message(self, url):
-        from urllib.parse import urlparse
-        # Prefix dla 'http://www.'
-        uri_prefix = 0x01
-        # Odcinamy 'http://' dla skrócenia URL
-        parsed_url = urlparse(url)
-        short_url = parsed_url.netloc + parsed_url.path
-
-        # Budowa payloadu dla URL
-        payload = [ord('U'), uri_prefix] + [ord(c) for c in short_url]
-
-        # Długość payloadu
-        payload_length = len(payload)
-
-        # Budowanie NDEF Message
-        ndef_header = [0xD1, 0x01, payload_length, 0x55]  # D1 (SR, TNF), Type Length, Payload Length, Type 'U'
-        ndef_message = [0x03, payload_length] + ndef_header + payload + [0xFE]  # Dodajemy NDEF Message Start, Payload Length i Terminator NDEF
-
-        # Dodaj padding, jeśli potrzebny
-        while len(ndef_message) % 4 != 0:
-            ndef_message.append(0x00)  # Dodajemy padding do pełnych stron
-
-        # Podziel na strony
-        pages = [ndef_message[i:i+4] for i in range(0, len(ndef_message), 4)]
-        # Przygotuj komendy zapisu
         commands = []
-        for page_number, page in enumerate(pages, start=4):  # Początkowa strona dla danych NDEF to 4
-            command = [0xFF, 0xD6, 0x00, page_number, 0x04] + page
-            commands.append(command)
-
+        commands.append([0xFF, 0xD6, 0x00, 0x04, 0x04, 0x03, 0x10, 0xD1, 0x01])
+        commands.append([0xFF, 0xD6, 0x00, 0x05, 0x04, 0x0C, 0x55, 0x01, 0x65])
+        commands.append([0xFF, 0xD6, 0x00, 0x06, 0x04, 0x78, 0x61, 0x6D, 0x70])
+        commands.append([0xFF, 0xD6, 0x00, 0x07, 0x04, 0x6C, 0x65, 0x2E, 0x63])
+        commands.append([0xFF, 0xD6, 0x00, 0x08, 0x04, 0x6F, 0x6D, 0xFE, 0x00])
+        print(commands)
+        print(type(commands))
+        print(type(commands[0][0]))
         return commands
-
 
         
     def notify_callbacks(self, message):
