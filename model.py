@@ -94,7 +94,8 @@ class CardModel:
 
         # Używamy tylko URL dla prostego przykładu
         # ndef_commands = self.prepare_url_ndef_message(url)
-        ndef_commands = self.prepare_phone_ndef_message(phone)
+        # ndef_commands = self.prepare_phone_ndef_message(phone)
+        ndef_commands = self.prepare_text_ndef_message(text)
         reader_list = readers()
         if not reader_list:
             self.notify("Żaden czytnik nie jest dostępny.")
@@ -190,18 +191,40 @@ class CardModel:
 
         return commands
 
+    def prepare_text_ndef_message(self, text):
+        # Konwersja tekstu na bajty
+        text_bytes = text.encode('utf-8')
 
-    def prepare_text_ndef_message(self, url):
         commands = []
-        commands.append([0xFF, 0xD6, 0x00, 0x04, 0x04, 0x03, 0x10, 0xD1, 0x01])
-        commands.append([0xFF, 0xD6, 0x00, 0x05, 0x04, 0x0C, 0x55, 0x01, 0x65])
-        commands.append([0xFF, 0xD6, 0x00, 0x06, 0x04, 0x78, 0x61, 0x6D, 0x70])
-        commands.append([0xFF, 0xD6, 0x00, 0x07, 0x04, 0x6C, 0x65, 0x2E, 0x63])
-        commands.append([0xFF, 0xD6, 0x00, 0x08, 0x04, 0x6F, 0x6D, 0xFE, 0x00])
-        print(commands)
-        print(type(commands))
-        print(type(commands[0][0]))
+        current_page = 4  # Zaczynamy zapis od strony 4
+
+        # Długość całego rekordu NDEF
+        total_length = len(text_bytes) + 7  # Nagłówek ma 7 bajtów
+
+        # Utworzenie nagłówka rekordu NDEF
+        header = [0x03, total_length, 0xD1, 0x01, len(text_bytes) + 3, 0x54, 0x02]  # 0x54 - typ T (Text), 0x02 - kod języka
+
+        # Pełna wiadomość NDEF
+        full_message = header + list(text_bytes)
+
+        # Sprawdzenie, czy dołożyć znacznik końca 0xFE
+        if len(full_message) % 4 != 0:
+            full_message += [0xFE] + [0x00] * (4 - len(full_message) % 4 - 1)
+        else:
+            full_message += [0xFE, 0x00, 0x00, 0x00]
+
+        # Podział komunikatu na bloki po 4 bajty
+        while full_message:
+            chunk = full_message[:4]
+            full_message = full_message[4:]
+            commands.append([0xFF, 0xD6, 0x00, current_page, 0x04] + chunk)
+            current_page += 1
+
         return commands
+
+
+
+
 
 
         
