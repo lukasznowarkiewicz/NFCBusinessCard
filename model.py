@@ -17,14 +17,6 @@ class CardModel:
         r = readers()
         return r[0] if r else None
 
-    def read_card(self):
-        # Logika odczytu danych z karty
-        pass
-
-    def write_card(self, data):
-        # Logika zapisu danych na karcie
-        pass
-
     def connectToReader(self):
         # Znalezienie wszystkich dostępnych czytników
         card_readers = readers()
@@ -36,6 +28,36 @@ class CardModel:
         #Wybranie pierwszego dostępnego
         reader = card_readers[0]
         self.notify_callbacks("Uzywam czytnika: " + str(reader))
+
+    def clear_card(self):
+        # Lista czytników
+        reader_list = readers()
+        if not reader_list:
+            self.notify_callbacks("Żaden czytnik nie jest dostępny.")
+            return
+
+        reader = reader_list[0]
+        connection = reader.createConnection()
+        try:
+            connection.connect()
+            # Liczba stron do wyczyszczenia (hardcodowana wartość 135 stron)
+            pages = 0x80
+            for page in range(4, pages):
+                # Komenda do wyczyszczenia strony: [0xFF, 0xD6, 0x00, numer_strony, 0x04, 0x00, 0x00, 0x00, 0x00]
+                command = [0xFF, 0xD6, 0x00, page, 0x04, 0x00, 0x00, 0x00, 0x00]
+                self.notify_callbacks("Wysyłam komendę: " + toHexString(command))
+                # Wysyłanie komendy i odbieranie odpowiedzi
+                response, sw1, sw2 = connection.transmit(command)
+                if sw1 != 0x90 or sw2 != 0x00:
+                    self.notify_callbacks("Błąd zapisu, Status Word: {:02X} {:02X}".format(sw1, sw2))
+                    return
+            self.notify_callbacks("Dane NDEF zostały zapisane pomyślnie.")
+        except NoCardException:
+            self.notify_callbacks("Nie wykryto karty.")
+        except Exception as e:
+            self.notify_callbacks(f"Wystąpił błąd: {str(e)}")
+
+
 
     def connectToCard(self):
         # Pobranie listy dostępnych czytników
@@ -224,11 +246,6 @@ class CardModel:
             current_page += 1
 
         return commands
-
-
-
-
-
 
         
     def notify_callbacks(self, message):
