@@ -4,6 +4,11 @@
 
 Ten program służy do programowania kart NTAG 215 za pomocą czytnika Ac122u i biblioteki `smartcard` w Pythonie. Aplikacja korzysta ze wzorca projektowego MVC (Model-View-Controller) i posiada interfejs graficzny oparty na bibliotece `tkinter`.
 
+## DEMO
+
+https://github.com/lukasznowarkiewicz/NFCBusinessCard/assets/82212257/795faed7-96de-42b4-8f94-6b80d4e7fde6
+
+
 ### Wymagania
 
 - Python 3.10.12 ()
